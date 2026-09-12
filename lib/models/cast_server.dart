@@ -11,7 +11,7 @@ class CastServer {
     this.token,
   });
 
-  String get baseUrl => 'http://$host:$port';
+  String get baseUrl => Uri(scheme: 'http', host: host, port: port).toString();
 
   @override
   String toString() => '$name ($host:$port)';

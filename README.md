@@ -25,7 +25,8 @@ from your phone.
 - A running [wails-cast](https://github.com/SomeoneIsWorking/wails-cast) desktop
   instance with the **Remote API enabled** in its settings.
 - The phone and desktop on the same network.
-- Flutter SDK `>=3.0.0` to build.
+- Flutter SDK `>=3.44.0` (Dart `>=3.12.0`) and Android SDK API 36 to build
+  the Android client.
 
 ## Getting started
 

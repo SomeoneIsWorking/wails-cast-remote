@@ -15,47 +15,66 @@ class DiscoveryService extends ChangeNotifier {
   String? get error => _error;
 
   Future<void> startDiscovery() async {
-    if (_isDiscovering) return;
+    if (_isDiscovering) {
+      return;
+    }
     _error = null;
     try {
-      _discovery = BonsoirDiscovery(type: serviceType);
-      await _discovery!.ready;
+      final discovery = BonsoirDiscovery(type: serviceType);
+      _discovery = discovery;
+      await discovery.initialize();
 
-      _discovery!.eventStream?.listen((event) {
-        if (event.type == BonsoirDiscoveryEventType.discoveryServiceFound) {
-          event.service?.resolve(_discovery!.serviceResolver);
-        } else if (event.type == BonsoirDiscoveryEventType.discoveryServiceResolved) {
-          final service = event.service as ResolvedBonsoirService?;
-          if (service != null) {
-            final host = service.host;
-            if (host != null) {
-              final server = CastServer(
-                name: service.name,
-                host: host,
-                port: service.port,
-              );
-              if (!_servers.any((s) => s.host == server.host && s.port == server.port)) {
-                _servers.add(server);
-                notifyListeners();
-              }
-            }
-          }
-        } else if (event.type == BonsoirDiscoveryEventType.discoveryServiceLost) {
-          final service = event.service;
-          if (service != null) {
-            _servers.removeWhere((s) => s.name == service.name);
-            notifyListeners();
-          }
-        }
+      discovery.eventStream!.listen((event) {
+        _handleEvent(event, discovery);
       });
 
-      await _discovery!.start();
+      await discovery.start();
       _isDiscovering = true;
       notifyListeners();
     } catch (e) {
       _error = e.toString();
       _isDiscovering = false;
       notifyListeners();
+    }
+  }
+
+  void _handleEvent(BonsoirDiscoveryEvent event, BonsoirDiscovery discovery) {
+    if (event is BonsoirDiscoveryServiceFoundEvent) {
+      event.service.resolve(discovery.serviceResolver);
+      return;
+    }
+    if (event is BonsoirDiscoveryServiceResolvedEvent ||
+        event is BonsoirDiscoveryServiceUpdatedEvent) {
+      final service = event.service;
+      if (service == null) {
+        return;
+      }
+      final host = service.hostAddress ?? service.hostname;
+      if (host == null) {
+        return;
+      }
+      final server =
+          CastServer(name: service.name, host: host, port: service.port);
+      final existing = _servers.indexWhere((s) => s.name == server.name);
+      if (existing >= 0) {
+        if (_servers[existing].host != server.host ||
+            _servers[existing].port != server.port) {
+          _servers[existing] = server;
+          notifyListeners();
+        }
+      } else if (!_servers
+          .any((s) => s.host == server.host && s.port == server.port)) {
+        _servers.add(server);
+        notifyListeners();
+      }
+      return;
+    }
+    if (event is BonsoirDiscoveryServiceLostEvent) {
+      final removed = _servers.length;
+      _servers.removeWhere((s) => s.name == event.service.name);
+      if (_servers.length != removed) {
+        notifyListeners();
+      }
     }
   }
 

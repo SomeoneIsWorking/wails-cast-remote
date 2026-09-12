@@ -49,7 +49,9 @@ class CastClient {
     this.timeout = const Duration(seconds: 10),
   });
 
-  String get baseUrl => 'http://$host:$port';
+  Uri get _baseUri => Uri(scheme: 'http', host: host, port: port);
+
+  String get baseUrl => _baseUri.toString();
 
   Map<String, String> get _headers {
     final h = <String, String>{'Content-Type': 'application/json'};
@@ -60,7 +62,7 @@ class CastClient {
   }
 
   Future<Map<String, dynamic>> _get(String path, {Duration? timeout}) async {
-    final uri = Uri.parse('$baseUrl$path');
+    final uri = _baseUri.resolve(path);
     final response =
         await http.get(uri, headers: _headers).timeout(timeout ?? this.timeout);
     return _parseResponse(response);
@@ -68,7 +70,7 @@ class CastClient {
 
   Future<Map<String, dynamic>> _post(
       String path, Map<String, dynamic> body) async {
-    final uri = Uri.parse('$baseUrl$path');
+    final uri = _baseUri.resolve(path);
     final response = await http
         .post(uri, headers: _headers, body: jsonEncode(body))
         .timeout(timeout);
@@ -98,7 +100,10 @@ class CastClient {
   Future<List<LibraryItem>> getLibrary() async {
     final data = await _get('/library');
     final items = data['items'] as List<dynamic>? ?? [];
-    return items.cast<Map<String, dynamic>>().map(LibraryItem.fromJson).toList();
+    return items
+        .cast<Map<String, dynamic>>()
+        .map(LibraryItem.fromJson)
+        .toList();
   }
 
   /// Discovery on the desktop can take a couple of seconds, hence the longer
@@ -175,7 +180,8 @@ class CastClient {
 
   Future<({bool translated, String language, String subtitlePath})>
       getTranslationInfo(String id, {String? language}) async {
-    final q = StringBuffer('/translation-info?id=${Uri.encodeQueryComponent(id)}');
+    final q =
+        StringBuffer('/translation-info?id=${Uri.encodeQueryComponent(id)}');
     if (language != null && language.isNotEmpty) {
       q.write('&language=${Uri.encodeQueryComponent(language)}');
     }
@@ -196,8 +202,8 @@ class CastClient {
   Future<({RemoteSettings settings, List<QualityOption> qualityOptions})>
       getSettings() async {
     final data = await _get('/settings');
-    final settings =
-        RemoteSettings.fromJson(data['settings'] as Map<String, dynamic>? ?? {});
+    final settings = RemoteSettings.fromJson(
+        data['settings'] as Map<String, dynamic>? ?? {});
     final quality = (data['qualityOptions'] as List<dynamic>? ?? [])
         .cast<Map<String, dynamic>>()
         .map(QualityOption.fromJson)
