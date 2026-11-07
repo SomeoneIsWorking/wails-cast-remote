@@ -46,3 +46,5 @@ The app is a thin client over the desktop's HTTP remote API
 (`/devices`, `/library`, `/track-info`, `/play`, `/control`, `/state`,
 `/translate`, `/settings`, …). If a token is configured on the desktop, it is
 sent as the `X-Cast-Token` header.
+
+Built with AI assistance (Claude and other LLMs).
